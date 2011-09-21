@@ -26,17 +26,72 @@ let s:FloodIt = {
             \ 'limit_count' : 0,
             \}
 
-let s:rand_num = 1
-function! s:rand()
-	if has('reltime')
-		let match_end = matchend(reltimestr(reltime()), '\d\+\.') + 1
-		return reltimestr(reltime())[l:match_end : ]
-	else
-		" awful
-		let s:rand_num += 1
-		return s:rand_num
-	endif
+
+let s:hi = 0
+let s:lo = 0
+function! s:srand(seed)
+    if a:seed < 0
+        let s:hi = (a:seed - 0x80000000) / 0x10000 + 0x8000
+        let s:lo = (a:seed - 0x80000000) % 0x10000
+    else
+        let s:hi = a:seed / 0x10000 + 0x8000
+        let s:lo = a:seed % 0x10000
+    endif
 endfunction
+
+function! s:rand()
+    if s:hi == 0
+        let s:hi = s:random_seed()
+    endif
+    if s:lo == 0
+        let s:lo = s:random_seed()
+    endif
+    if s:hi < 0
+        let hi = s:hi - 0x80000000
+        let hi = 36969 * (hi % 0x10000) + (hi / 0x10000 + 0x8000)
+    else
+        let hi = s:hi
+        let hi = 36969 * (hi % 0x10000) + (hi / 0x10000)
+    endif
+    if s:lo < 0
+        let lo = s:lo - 0x80000000
+        let lo = 18273 * (lo % 0x10000) + (lo / 0x10000 + 0x8000)
+    else
+        let lo = s:lo
+        let lo = 18273 * (lo % 0x10000) + (lo / 0x10000)
+    endif
+    let s:hi = hi
+    let s:lo = lo
+    return (hi * 0x10000) + ((lo < 0 ? lo - 0x80000000 : lo) % 0x10000)
+endfunction
+
+function! s:random()
+    let n = s:rand()
+    if n < 0
+        return (n - 0x80000000) / 4294967295.0 + (0x40000000 / (4294967295.0 / 2.0))
+    else
+        return n / 4294967295.0
+    endif
+endfunction
+
+" V8 uses C runtime random function for seed and initialize it with time.
+let s:seed = float2nr(fmod(str2float(reltimestr(reltime())) * 256, 2147483648.0))
+function!  s:random_seed()
+    let s:seed = s:seed * 214013 + 2531011
+    return (s:seed < 0 ?  s:seed - 0x80000000 : s:seed) / 0x10000 % 0x8000 
+endfunction
+
+"let s:rand_num = 1
+"function! s:rand()
+"	if has('reltime')
+"		let match_end = matchend(reltimestr(reltime()), '\d\+\.') + 1
+"		return reltimestr(reltime())[l:match_end : ]
+"	else
+"		" awful
+"		let s:rand_num += 1
+"		return s:rand_num
+"	endif
+"endfunction
 
 " y行目x列目の文字をcに変更する
 function! s:update(x, y, c)
@@ -57,6 +112,8 @@ function! s:FloodIt.run(width,height,limit)
     let self.width = a:width
     let self.height = a:height
     let self.limit_count = a:limit
+
+    call s:srand(s:random_seed())
 
     call self.initialize_board()
     call self.draw()
@@ -200,12 +257,20 @@ endfunction
 function! s:FloodIt.shuffle()
     for y in range(self.height)
         for x in range(self.width)
-            let self.board[y][x] = string(s:rand()%6)." "
+            let ran=s:rand()%6
+            if ran<0
+                let ran=ran*(-1)
+            endif
+            let self.board[y][x] = string(ran)." "
         endfor
     endfor
 
     while self.board[0][0] == self.board[0][1] || self.board[0][0] == self.board[1][0]
-        let self.board[0][0]=string(s:rand()%6)." "
+        let ran=s:rand()%6
+        if ran<0
+            let ran = ran*(-1)
+        endif
+        let self.board[0][0]=string(ran)." "
     endwhile
 endfunction
 
@@ -222,6 +287,7 @@ function! s:FloodIt.draw()
         let str=join(self.board[y],'')
         call append(line('$'),str)
     endfor
+
 
     call append(line('$'),'')
     call append(line('$'),'w e r t y u ')
