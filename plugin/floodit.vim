@@ -21,6 +21,7 @@ let s:FloodIt = {
             \ 'width'  : 0,
             \ 'height' : 0,
             \ 'status' : 0,
+            \ 'change_cell' : [],
             \ 'change_count' : 0,
             \ 'limit_count' : 0,
             \}
@@ -137,7 +138,11 @@ function! s:FloodIt.change(color)
     endfor
 
     let self.change_count += 1
-    call self.change_color(0,0,color)
+    let self.change_cell = [[0,0,color]]
+    let self.checked[0][0]=1
+    while self.change_cell != []
+        call self.change_color()
+    endwhile
     let flag = 0
     for y in range(self.height)
         for x in range(self.width)
@@ -159,21 +164,22 @@ function! s:FloodIt.change(color)
 	call setpos('.',pos)
 endfunction
 
-function! s:FloodIt.change_color(x,y,color)
-    let xs=[0,-1,1,0]
-    let ys=[-1,0,0,1]
-    let current=self.board[a:y][a:x]
-    if self.checked[a:y][a:x]==1
-        return
+function! s:FloodIt.change_color()
+    let [x,y,color]=self.change_cell[0]    
+    if len(self.change_cell)==1
+        let self.change_cell=[]
+    else
+        let self.change_cell=self.change_cell[1:]
     endif
-    let self.checked[a:y][a:x]=1
-    let self.board[a:y][a:x]=a:color
-    for i in range(4)
-        if a:x+xs[i] < 0 || a:x+xs[i] >= self.width || a:y+ys[i] < 0 || a:y+ys[i] >= self.height
+    let current=self.board[y][x]
+    let self.board[y][x]=color
+    for [dx,dy] in [[0,-1],[-1,0],[1,0],[0,1]]
+        if x+dx < 0 || x+dx >= self.width || y+dy < 0 || y+dy >= self.height
             continue
         endif
-        if self.board[a:y+ys[i]][a:x+xs[i]]==current && self.checked[a:y+ys[i]][a:x+xs[i]] == 0
-            call self.change_color(a:x+xs[i],a:y+ys[i],a:color)
+        if self.board[y+dy][x+dx] == current && self.checked[y+dy][x+dx] == 0
+            call add(self.change_cell,[x+dx,y+dy,color])
+            let self.checked[y+dy][x+dx]=1
         endif
     endfor
 endfunction
