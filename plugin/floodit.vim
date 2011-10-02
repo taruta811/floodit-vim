@@ -306,7 +306,7 @@ function! s:_floodit(...)
         call s:FloodIt.run(12,12,22)
     elseif a:1 == "middle"
         call s:FloodIt.run(17,17,30)
-    elseif a:1 == "learge"
+    elseif a:1 == "large"
         call s:FloodIt.run(22,22,36)
     endif
 endfunction
