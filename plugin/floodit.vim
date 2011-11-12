@@ -11,7 +11,6 @@ let g:loaded_floodit_vim= 1
 
 let s:save_cpo = &cpo
 set cpo&vim
-set maxfuncdepth=1000
 
 " ----------------------------------------------------------------------------
 
